@@ -69,9 +69,9 @@ f2 = sum(colSums(TransectAbundance) == 2) # number of doubleton species
 Chao1 = Richness_raw+f1*(f1-1)/(2*(f2+1)) # Chao1 richness estimator
 
 # compute Chao2 estimate
-q1 = sum(colSums(TransectAbundance > 1) == 1) # number of species occurring in one transect only
-q2 = sum(colSums(TransectAbundance > 1) == 2) # number of species occurring in two transect only
-m = sum(colSums(TransectAbundance > 1)) # total number of samples
+q1 = sum(colSums(TransectAbundance > 0) == 1) # number of species occurring in one transect only
+q2 = sum(colSums(TransectAbundance > 0) == 2) # number of species occurring in two transect only
+m = sum(colSums(TransectAbundance > 0)) # total number of samples
 Chao2 = Richness_raw+((m-1)/m)*q1*(q1-1)/(2*(q2+1)) # Chao2 richness estimator
 
 # compute abundance-based coverage estimator (ACE)
