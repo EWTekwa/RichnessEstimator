@@ -6,7 +6,7 @@ E. W. Tekwa1,2*, Matthew A. Whalen1,2, Patrick T. Martone3, Mary I. O’Connor1
 1Department of Zoology, University of British Columbia, Vancouver, BC, Canada.
 2Hakai Institute, Heriot Bay, BC, Canada
 3Department of Botany, University of British Columbia, Vancouver, BC, Canada.
-*Corresponding author email: edtekwa@gmail.com, ORCID: 0000-0003-2971-6128
+*Corresponding author email: ewtekwa@gmail.com, ORCID: 0000-0003-2971-6128
 
 Main Matlab files:
 Data_all.mat
