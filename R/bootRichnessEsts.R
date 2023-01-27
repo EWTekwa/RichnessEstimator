@@ -16,7 +16,7 @@ bootRichnessEsts <- function(TransectAbundance, numBoot = 100){
 # This script calculates bootstrapped confidence intervals
 # the spatial TransectAbundance data: rows = transects, columns = species,
 #                                     values = individual counts
-# Whalen update 16 January 2023
+# Whalen last update 27 January 2023
   
 
 # Get point estimates from original dataset
@@ -225,9 +225,9 @@ for( resample in 2:numBoot ){
 # return(list(as.list(RichnessEstsCov(TransectAbundance)),expectedRichness_raw=expectedRichness_raw,expectedRichness_apx=expectedRichness_apx,
 #             expectedChao1=expectedChao1,expectedChao2=expectedChao2,
 #             expectedACE=expectedACE,expectedS_aj2=expectedS_aj2,expectedS_ij2=expectedS_ij2))
-return(data.frame(expectedRichness_raw = expectedRichness_raw,
-            expectedRichness_omega_T = expectedRichness_omega_T,
-            expectedRichness_omega_0 = expectedRichness_omega_0,
-            expectedChao1 = expectedChao1, expectedChao2 = expectedChao2,
-            expectedACE = expectedACE, expectedS_aj2 = expectedS_aj2, expectedS_ij2 = expectedS_ij2))
+return(data.frame(Richness_raw = expectedRichness_raw,
+            omega_T = expectedRichness_omega_T,
+            omega_0 = expectedRichness_omega_0,
+            Chao1 = expectedChao1, Chao2 = expectedChao2,
+            ACE = expectedACE, S_aj2 = expectedS_aj2, S_ij2 = expectedS_ij2))
 }
