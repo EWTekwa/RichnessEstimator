@@ -8,6 +8,8 @@ E. W. Tekwa1,2*, Matthew A. Whalen1,2, Patrick T. Martone3, Mary I. O’Connor1
 3Department of Botany, University of British Columbia, Vancouver, BC, Canada.
 *Corresponding author email: ewtekwa@gmail.com, ORCID: 0000-0003-2971-6128
 
+Note: The following documentation is for code and data used to generate the results in the paper cited above. For the R-package with the richness estimator functions, please see the subfolder /Richness.
+
 Main Matlab files:
 Data_all.mat
 RichnessEstsCov.m
