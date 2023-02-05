@@ -1,8 +1,8 @@
-richnessEstsCov <- function( Community ){
+RichnessEsts <- function( Community ){
 
 # RichnessEsts.m
 # Ed Tekwa Feb 8, 2022
-# RichnessEstsCov.R
+# RichnessEsts.R
 # Matt Whalen rewrote original matlab script for R - Mar 27, 2022
 # function several estimates of richness:
   # - raw richness

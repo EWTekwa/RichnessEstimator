@@ -1,4 +1,4 @@
-bootRichnessEsts <- function(Community, numBoot = 100){
+bootstrapRichness <- function(Community, numBoot = 100){
 
 # bootRichnessEsts.m
 # Ed Tekwa Feb 8, 2022
@@ -12,7 +12,7 @@ bootRichnessEsts <- function(Community, numBoot = 100){
 #  - Abundance-based coverage estimator (ACE)
 #  - Jackknife abundance estimator
 #  - Jackknife incidence estimator
-# Point estimates are calculated using script "RichnessEstsCov.R"
+# Point estimates are calculated using script "RichnessEsts.R"
 # This script calculates bootstrapped confidence intervals
 # the spatial Community data: rows = transects, columns = species,
 #                                     values = individual counts
@@ -22,7 +22,7 @@ bootRichnessEsts <- function(Community, numBoot = 100){
 # Get point estimates from original dataset
 Community = Community[ ,colSums(Community) > 0 ] # remove empty species columns
 # run function to calculate all point estimates - ignore correction terms states and approximated detection probabilities
-pointests = RichnessEstsCov( Community )[[1]]
+pointests = RichnessEsts( Community )[[1]]
 
 
 # store bootstrapped estimates for raw richness and each estimator
@@ -222,9 +222,6 @@ for( resample in 2:numBoot ){
 
 
 
-# return(list(as.list(RichnessEstsCov(Community)),expectedRichness_raw=expectedRichness_raw,expectedRichness_apx=expectedRichness_apx,
-#             expectedChao1=expectedChao1,expectedChao2=expectedChao2,
-#             expectedACE=expectedACE,expectedS_aj2=expectedS_aj2,expectedS_ij2=expectedS_ij2))
 return(data.frame(Richness_raw = expectedRichness_raw,
             Omega_T = expectedRichness_Omega_T,
             Omega_0 = expectedRichness_Omega_0,
