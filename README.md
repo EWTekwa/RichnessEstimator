@@ -1,12 +1,15 @@
 # RichnessEstimator
 Code and data for:
 An improved species richness estimator using spatial abundance data
-Eden Tekwa1,2*, Matthew A. Whalen1,2, Patrick T. Martone3, Mary I. O’Connor1
+Eden W. Tekwa1,2*, Matthew A. Whalen2,3,4, Patrick T. Martone3, Mary I. O’Connor1
 
 1Department of Zoology, University of British Columbia, Vancouver, BC, Canada.
 2Hakai Institute, Heriot Bay, BC, Canada
 3Department of Botany, University of British Columbia, Vancouver, BC, Canada.
+4Department of Biology, Virginia State University, Petersburg, VA, USA
 *Corresponding author email: ewtekwa@gmail.com, ORCID: 0000-0003-2971-6128
+Emails for MW: mawhal@gmail.com, PM: patrick.martone@botany.ubc.ca, MO: oconnor@zoology.ubc.ca.
+
 
 Note: The following documentation is for code and data used to generate the results in the paper cited above. For the R-package with the richness estimator functions, please see the subfolder /Richness.
 
