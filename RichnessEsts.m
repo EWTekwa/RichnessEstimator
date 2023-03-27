@@ -1,33 +1,32 @@
-function [Richness_raw,Chao1,GP,Chao2,ACE,S_aj2,S_ij2,Richness_apx,Richness_taylor,Richness_taylor_0,Apx_detectP_terms,meanStates] = RichnessEsts(TransectAbundance)
+function [Richness_raw,Chao1,GP,Chao2,ACE,JK_a,JK_i,Richness_omega,Richness_taylor,Richness_taylor_0,Omega_T_terms,meanStates] = RichnessEsts(TransectAbundance)
 
 %RichnessEsts.m
 %Eden Tekwa Feb 8, 2022 - Apr 11, 2022
-%function returns Chao1 and Taylor2 Apx for richness means based on
+%function returns richness estimates based on
 %the spatial TransectAbundance data: rows=transects, columns=species,
 %values=individual counts
 
 TransectAbundance=TransectAbundance(:,sum(TransectAbundance,1)>0); %take out empty species columns
 
 %write observational process model
-syms nm k P xi
-xi=(1-exp(-nm/P));
-Dix=xi*P;
-Dis=1-(1-Dix)^k; %detection probability of species i across all sampled sites x in community s
-
+syms mn k P Dixo
+Dixo=(1-exp(-mn/P)); %obersvation probability in occupied patch x for species i
+Dix=Dixo*P; %observation probability in patch x
+Di=1-(1-Dix)^k; %detection probability of species i across all sampled sites x in community
 
 %second-order partial derivatives for 2nd order Taylor expansion of overall detection probability of any species in the community
-%     d2Dis_dnm2=diff(Dis,'nm',2);
-%     d2Dis_dP2=diff(Dis,'P',2);
-%     d2Dis_dnmP=diff(diff(Dis,'nm'),'P');
+%     d2Di_dmn2=diff(Di,'mn',2);
+%     d2Di_dP2=diff(Di,'P',2);
+%     d2Di_dmnP=diff(diff(Di,'mn'),'P');
 
 %hard coded results from above for speed:
-d2Dis_dnm2 = - (k*exp(-nm/P)*(P*(exp(-nm/P) - 1) + 1)^(k - 1))/P - k*exp(-(2*nm)/P)*(P*(exp(-nm/P) - 1) + 1)^(k - 2)*(k - 1);
-d2Dis_dP2 = - k*(P*(exp(-nm/P) - 1) + 1)^(k - 2)*(k - 1)*(exp(-nm/P) + (nm*exp(-nm/P))/P - 1)^2 - (k*nm^2*exp(-nm/P)*(P*(exp(-nm/P) - 1) + 1)^(k - 1))/P^3;
-d2Dis_dnmP = (k*nm*exp(-nm/P)*(P*(exp(-nm/P) - 1) + 1)^(k - 1))/P^2 + k*exp(-nm/P)*(P*(exp(-nm/P) - 1) + 1)^(k - 2)*(k - 1)*(exp(-nm/P) + (nm*exp(-nm/P))/P - 1);
+d2Di_dmn2 = - (k*exp(-mn/P)*(P*(exp(-mn/P) - 1) + 1)^(k - 1))/P - k*exp(-(2*mn)/P)*(P*(exp(-mn/P) - 1) + 1)^(k - 2)*(k - 1);
+d2Di_dP2 = - k*(P*(exp(-mn/P) - 1) + 1)^(k - 2)*(k - 1)*(exp(-mn/P) + (mn*exp(-mn/P))/P - 1)^2 - (k*mn^2*exp(-mn/P)*(P*(exp(-mn/P) - 1) + 1)^(k - 1))/P^3;
+d2Di_dmnP = (k*mn*exp(-mn/P)*(P*(exp(-mn/P) - 1) + 1)^(k - 1))/P^2 + k*exp(-mn/P)*(P*(exp(-mn/P) - 1) + 1)^(k - 2)*(k - 1)*(exp(-mn/P) + (mn*exp(-mn/P))/P - 1);
 
 numTrans=size(TransectAbundance,1); %get number of transects
 Richness_raw=sum(sum(TransectAbundance,1)>0); %get raw richness
-Ds=zeros(Richness_raw,1); %store observed species' observation probabilities
+D=zeros(Richness_raw,1); %store observed species' observation probabilities
 P_detected=zeros(1,Richness_raw); %array to record occupancy for each species
 for species=1:Richness_raw
 
@@ -37,17 +36,17 @@ P_detected(P_detected==0)=NaN;
 %compute on full dataset:
 mean_P_detected=nanmean(P_detected);
 var_P_detected=nanvar(P_detected);
-n_m_detected=mean(TransectAbundance,1);
-if isnan(n_m_detected)
-    n_m_detected=[];
+mn_detected=mean(TransectAbundance,1);
+if isnan(mn_detected)
+    mn_detected=[];
 end
-mean_n_m_detected=mean(n_m_detected);
-var_n_m_detected=var(n_m_detected);
-cov_nm_P_detected=nancov(n_m_detected,P_detected);
-if size(cov_nm_P_detected,2)>1
-    cov_nm_P_detected=cov_nm_P_detected(1,2);
+mean_mn_detected=mean(mn_detected);
+var_mn_detected=var(mn_detected);
+cov_mn_P_detected=nancov(mn_detected,P_detected);
+if size(cov_mn_P_detected,2)>1
+    cov_mn_P_detected=cov_mn_P_detected(1,2);
 else
-    cov_nm_P_detected=0;
+    cov_mn_P_detected=0;
 end
 
 %compute Chao1 estimate
@@ -104,53 +103,55 @@ else
 end
 
 %compute jackknife abundance estimator
-S_aj2=Richness_raw+2*f1-f2;
+JK_a=Richness_raw+2*f1-f2;
 
 %compute jackknife incidence estimator
 if m==1
-    S_ij2=Richness_raw;
+    JK_i=Richness_raw;
 else
-    S_ij2=Richness_raw+(q1*(2*m-3)/m-q2*((m-2)^2)/(m*(m-1)));
+    JK_i=Richness_raw+(q1*(2*m-3)/m-q2*((m-2)^2)/(m*(m-1)));
 end
 
 %compute correction terms for omega_T
 k=numTrans;
-nm=mean_n_m_detected;
+mn=mean_mn_detected;
 P=mean_P_detected;
-Apx_detectP_terms=([eval(Dis)
-    eval(d2Dis_dnm2)*var_n_m_detected/2
-    eval(d2Dis_dP2)*var_P_detected/2
-    eval(d2Dis_dnmP)*cov_nm_P_detected]);
+Omega_T_terms=([eval(Di)
+    eval(d2Di_dmn2)*var_mn_detected/2
+    eval(d2Di_dP2)*var_P_detected/2
+    eval(d2Di_dmnP)*cov_mn_P_detected]);
 
-if sum(Apx_detectP_terms)>0.1 %if sum of correction terms is greater than a threshold
-    Ds_apx=sum(Apx_detectP_terms); %use full correction
+if sum(Omega_T_terms)>0.1 %if sum of correction terms is greater than a threshold
+    D_omega=sum(Omega_T_terms); %use full correction
 else
-    Ds_apx=Apx_detectP_terms(1); %else, use 0th order correction
+    D_omega=Omega_T_terms(1); %else, use 0th order correction
 end
-if Ds_apx>1
-    Ds_apx=1;
+if D_omega>1
+    D_omega=1;
 end
-if Ds_apx<0.1
-    Ds_apx=0.1;
+if D_omega<0.1
+    D_omega=0.1;
 end
-Richness_taylor=Richness_raw/Ds_apx;
-Richness_taylor_0=Richness_raw/Apx_detectP_terms(1);
-meanStates=[mean_n_m_detected,mean_P_detected,var_n_m_detected,var_P_detected,cov_nm_P_detected]';
+Richness_taylor=Richness_raw/D_omega;
+Richness_taylor_0=Richness_raw/Omega_T_terms(1);
+meanStates=[mean_mn_detected,mean_P_detected,var_mn_detected,var_P_detected,cov_mn_P_detected]';
 
-%compute omega_o
-nm=n_m_detected;
+%compute omega
+mn=mn_detected;
 P=P_detected;
-Ds_means=eval(Dis);
-Ds_mean=mean(Ds_means);
-Richness_apx=Richness_raw/Ds_mean;
+D_means=eval(Di);
+D_mean=mean(D_means);
+Richness_omega=Richness_raw/D_mean;
 
 if Richness_raw==0
     Richness_raw=NaN;
     Richness_taylor=NaN;
-    Richness_apx=NaN;
+    Richness_taylor_0=NaN;
+    Richness_omega=NaN;
     Chao1=NaN;
+    GP=NaN;
     Chao2=NaN;
     ACE=NaN;
-    S_aj2=NaN;
-    S_ij2=NaN;
+    JK_a=NaN;
+    JK_i=NaN;
 end
