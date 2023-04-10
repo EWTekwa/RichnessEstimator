@@ -33,12 +33,12 @@ varn <- function(x) mean((x-mean(x))^2)
 # # write observational process model
 # Dix = (1-exp(-C*nm))*P # local detection probability of species i at sampled site x
 # Di = 1-(1-Dix)^k # detection probability of species i across all sampled sites x in community s
-Di <- expression( 1-(1-((1-exp(-nm))*P))^k )
+Di = expression( 1-(1-((1-exp(-nm))*P))^k )
 
 # second-order derivatives
-d2Di_dnm2 <- D(D( Di, "nm" ), "nm")
-d2Di_dP2  <- D(D( Di, "P" ), "P")
-d2Di_dnmP  <- D(D( Di, "nm" ), "P")
+d2Di_dnm2 = D(D( Di, "nm" ), "nm")
+d2Di_dP2  = D(D( Di, "P" ), "P")
+d2Di_dnmP = D(D( Di, "nm" ), "P")
 
 
 numTrans =  nrow(Community) # get number of transects
@@ -63,9 +63,33 @@ if( length(cov_nm_P_detected[,2])>1 ){
 }
 
 # calculate singletons, doubletons, and the Chao1 richness estimator
+Community = ceiling(Community)
 f1 = sum(colSums(Community) == 1) # number of singleton species
 f2 = sum(colSums(Community) == 2) # number of doubleton species
 Chao1 = Richness_raw+f1*(f1-1)/(2*(f2+1)) # Chao1 richness estimator
+
+# compute GP (Gamma-Poisson mixture) estimate (Chiu 2023, peerJ)
+f3 = sum(sum(TransectAbundance,1)==3) #number of tripleton species
+if( f3 == 0 ){
+  f3c = 1
+} else {
+  f3c = f3
+}
+if( f1 == 0 ){
+  f1c = 1
+} else {
+  f1c = f1
+A = 2-(2*f2^2)/(3*f1c*f3c)
+if( f2 > 0 ){
+  f0Chao1 = f1c^2/(2*f2)
+} else {
+  f0Chao1 = f1c*(f1c-1)/2
+}
+if( A < 1 ){
+  GP = Richness_raw+f0Chao1*max(c(.5, A))
+} else {
+  GP = Richness_raw+f0Chao1
+}
 
 # compute Chao2 estimate
 q1 = sum(colSums(Community >= 1) == 1) # number of species occurring in one sample only
@@ -98,42 +122,42 @@ S_ij2 = Richness_raw+(q1*(2*m-3)/m-q2*((m-2)^2)/(m*(m-1)))
 
 
 # compute correction terms for proposed approximation method
-k <- numTrans
-nm <- mean_n_m_detected
-P <- mean_P_detected
-Omega_detectP_terms <- c( eval(Di),
+k  = numTrans
+nm = mean_n_m_detected
+P  = mean_P_detected
+Omega_detectP_terms = c( eval(Di),
   eval(d2Di_dnm2)*var_n_m_detected/2,
   eval(d2Di_dP2)*var_P_detected/2,
   eval(d2Di_dnmP)*cov_nm_P_detected ) # Approximated detection probability in community
 
 # check for correction term relative to some threshold
 if( sum(Omega_detectP_terms, na.rm = T) > 0.1 ){ # if sum of correction terms is positive and greater than a threshold
-  D_omega <- sum(Omega_detectP_terms, na.rm = T) # use full correction
+  D_omega = sum(Omega_detectP_terms, na.rm = T) # use full correction
 } else {
-  D_omega <- Omega_detectP_terms[1] # else, use 0th order correction
+  D_omega = Omega_detectP_terms[1] # else, use 0th order correction
 }
 if( sum(Omega_detectP_terms, na.rm = T) > 1 ){
-  D_omega <- 1
+  D_omega = 1
 }
 if( sum(Omega_detectP_terms, na.rm = T) < 0.1 ){
-  D_omega <- 0.1
+  D_omega = 0.1
 }
-Omega_taylor   <- Richness_raw/D_omega
-Omega_taylor_0 <- Richness_raw/Omega_detectP_terms[1]
+Omega_taylor   = Richness_raw/D_omega
+Omega_taylor_0 = Richness_raw/Omega_detectP_terms[1]
 
 
 # assign the mean states of correction terms to return with the function
-meanStates <- c(mean_n_m_detected,mean_P_detected,
+meanStates = c(mean_n_m_detected,mean_P_detected,
                 var_n_m_detected,var_P_detected,
                 cov_nm_P_detected )
 
 
 # compute Omega_o
-nm <- n_m_detected
-P <- na.omit(P_detected)
-D_means <- eval(Di)
-D_mean <- mean(D_means, na.rm = T)
-Omega <- Richness_raw/D_mean
+nm = n_m_detected
+P = na.omit(P_detected)
+D_means = eval(Di)
+D_mean = mean(D_means, na.rm = T)
+Omega = Richness_raw/D_mean
 
 
 if( Richness_raw == 0 ){
