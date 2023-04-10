@@ -16,7 +16,9 @@ bootstrapRichness <- function(Community, numBoot = 100){
 # This script calculates bootstrapped confidence intervals
 # the spatial Community data: rows = transects, columns = species,
 #                                     values = individual counts
-# Whalen last update 27 January 2023
+# Whalen update 9 April 2023
+  # - remove Clustering calculations
+  # -
 
 
 # Get point estimates from original dataset
@@ -50,14 +52,11 @@ expectedRichness_Omega_T[1] = pointests$Omega_T
 varn <- function(x) mean((x-mean(x))^2)
 
 # write observational process model
-Dis <- expression( 1-(1-((1-exp(-C*nm))*P))^k )
+Di <- expression( 1-(1-((1-exp(-nm))*P))^k )
 # second-order derivatives
-d2Dis_dnm2 <- D(D( Dis, "nm" ), "nm")
-d2Dis_dC2  <- D(D( Dis, "C" ), "C")
-d2Dis_dP2  <- D(D( Dis, "P" ), "P")
-d2Dis_dnmC  <- D(D( Dis, "nm" ), "C")
-d2Dis_dnmP  <- D(D( Dis, "nm" ), "P")
-d2Dis_dCP   <- D(D( Dis, "C" ), "P")
+d2Di_dnm2 <- D(D( Di, "nm" ), "nm")
+d2Di_dP2  <- D(D( Di, "P" ), "P")
+d2Di_dnmP  <- D(D( Di, "nm" ), "P")
 
 
 # get the number of sampling units (e.g., transects or quadrats)
@@ -143,52 +142,33 @@ for( resample in 2:numBoot ){
 
     # compute correction terms for proposed approximation method
     raw = sum(colSums(sampleSetOmega_0) > 0)
-    C_detected = rep(0,ncol(Community)) # array of zeros to record clustering for each species
     P_detected = rep(0,ncol(Community)) # array of zeros to record occupancy for each species
     for( species in 1:ncol(Community) ) {
-      if( numSamplingUnit == 1 ){
-        C_detected[species] = 1+1/mean(Community[,species]) # if only one sampled site, estimate spatial variance as poisson mean
-      } else {
-        C_detected[species] = 1+varn(Community[,species])/(mean(Community[,species])^2) # spatial variance normalized by N (not the normal N-1)
-      }
       P_detected[species] = sum(Community[,species] > 0)/numSamplingUnit # occupancy as number of transects occupied divided by number of transects
     }
-    C_detected[C_detected==Inf] = NA
     P_detected[P_detected==0] = NA
     # compute on full dataset - means, variances, and covariances
-    mean_C_detected = mean(C_detected, na.rm = TRUE )
-    var_C_detected  = var(C_detected, na.rm = TRUE )
     mean_P_detected = mean(P_detected[P_detected>0], na.rm = TRUE )
     var_P_detected  = var(P_detected[P_detected>0], na.rm = TRUE )
     n_m_detected = colMeans(Community[,colSums(Community)>0])
     mean_n_m_detected = mean(n_m_detected)
     var_n_m_detected  = var(colMeans(Community[,colSums(Community)>0]))
-    cov_nm_C_detected = cov( data.frame(x = colMeans(Community[,colSums(Community)>0]), y = na.omit(C_detected)), use = "complete.obs")
     cov_nm_P_detected = cov( data.frame(x = colMeans(Community[,colSums(Community)>0]), y = na.omit(P_detected)), use = "complete.obs")
-    cov_C_P_detected = cov( data.frame(x = C_detected, y = P_detected), use = "complete.obs")
     if( length(cov_nm_P_detected[,2])>1 ){
-      cov_nm_C_detected = cov_nm_C_detected[1,2]
       cov_nm_P_detected = cov_nm_P_detected[1,2]
-      cov_C_P_detected = cov_C_P_detected[1,2]
     } else {
-      cov_nm_C_detected = 0
       cov_nm_P_detected = 0
-      cov_C_P_detected = 0
     }
 
     k = numSamplingUnit
     # k = 1
-    C = mean_C_detected
     nm = mean_n_m_detected
     P = mean_P_detected
     # add "eval" before "(" below if using ke in place of k
-    Apx_detectP_terms = (c( eval(Dis),
-                            eval(d2Dis_dnm2)*var_n_m_detected/2,
-                            eval(d2Dis_dC2)*var_C_detected/2,
-                            eval(d2Dis_dP2)*var_P_detected/2,
-                            eval(d2Dis_dnmC)*cov_nm_C_detected,
-                            eval(d2Dis_dnmP)*cov_nm_P_detected,
-                            eval(d2Dis_dCP)*cov_C_P_detected )) # Approximated detection probability in community
+    Apx_detectP_terms = (c( eval(Di),
+                            eval(d2Di_dnm2)*var_n_m_detected/2,
+                            eval(d2Di_dP2)*var_P_detected/2,
+                            eval(d2Di_dnmP)*cov_nm_P_detected )) # Approximated detection probability in community
 
     # check for correction term relative to some threshold
     if( sum(Apx_detectP_terms, na.rm = T) > 0.1 ){ # if sum of correction terms is positive and greater than a threshold
@@ -202,10 +182,9 @@ for( resample in 2:numBoot ){
     Richness_Omega_T_boot = raw/Ds_apx
 
     # compute Omega_o
-    C = na.omit(C_detected)
     nm = n_m_detected
     P = na.omit(P_detected)
-    Ds_means = eval(Dis)
+    Ds_means = eval(Di)
     Ds_mean = mean(Ds_means, na.rm = T)
     Richness_Omega_0_boot = raw/Ds_mean
 

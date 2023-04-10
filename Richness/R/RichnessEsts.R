@@ -21,7 +21,10 @@ RichnessEsts <- function( Community ){
   # - two versions of the estimate
     # - Omega_not - uses average detection probabilities
     # - Omega_T - uses Taylor approximation
-# Whalen last update 27 January 2023
+# Whalen last update 9 April 2023
+  # - remove Clustering calculations
+  # - add third Omega calculation (Omega, Omega_T, Omega_0)
+  # - add another estimator (Gamma Poisson)
 
 
 # define variance function with normalization of n rather than n-1
@@ -29,52 +32,34 @@ varn <- function(x) mean((x-mean(x))^2)
 
 # # write observational process model
 # Dix = (1-exp(-C*nm))*P # local detection probability of species i at sampled site x
-# Dis = 1-(1-Dix)^k # detection probability of species i across all sampled sites x in community s
-Dis <- expression( 1-(1-((1-exp(-C*nm))*P))^k )
+# Di = 1-(1-Dix)^k # detection probability of species i across all sampled sites x in community s
+Di <- expression( 1-(1-((1-exp(-nm))*P))^k )
+
 # second-order derivatives
-d2Dis_dnm2 <- D(D( Dis, "nm" ), "nm")
-d2Dis_dC2  <- D(D( Dis, "C" ), "C")
-d2Dis_dP2  <- D(D( Dis, "P" ), "P")
-d2Dis_dnmC  <- D(D( Dis, "nm" ), "C")
-d2Dis_dnmP  <- D(D( Dis, "nm" ), "P")
-d2Dis_dCP   <- D(D( Dis, "C" ), "P")
+d2Di_dnm2 <- D(D( Di, "nm" ), "nm")
+d2Di_dP2  <- D(D( Di, "P" ), "P")
+d2Di_dnmP  <- D(D( Di, "nm" ), "P")
 
 
 numTrans =  nrow(Community) # get number of transects
 Richness_raw = sum(colSums(Community)>0) # get raw richness
-C_detected = rep(0,ncol(Community)) # array of zeros to record clustering for each species
 P_detected = rep(0,ncol(Community)) # array of zeros to record occupancy for each species
-
-
 for( species in 1:ncol(Community) ) {
-  if( numTrans == 1 ){
-  C_detected[species] = 1+1/mean(Community[,species]) # if only one sampled site, estimate spatial variance as poisson mean
-  } else {
-  C_detected[species] = 1+varn(Community[,species])/(mean(Community[,species])^2) # spatial variance normalized by N (not the normal N-1)
-  }
   P_detected[species] = sum(Community[,species] > 0)/numTrans # occupancy as number of transects occupied divided by number of transects
 }
-C_detected[C_detected==Inf] = NA
 P_detected[P_detected==0] = NA
+
 # compute on full dataset - means, variances, and covariances
-mean_C_detected = mean(C_detected, na.rm = TRUE )
-var_C_detected  = var(C_detected, na.rm = TRUE )
 mean_P_detected = mean(P_detected[P_detected>0], na.rm = TRUE )
 var_P_detected  = var(P_detected[P_detected>0], na.rm = TRUE )
 n_m_detected = colMeans(Community[,colSums(Community)>0])
 mean_n_m_detected = mean(n_m_detected)
 var_n_m_detected  = var(colMeans(Community[,colSums(Community)>0]))
-cov_nm_C_detected = cov( data.frame(x = colMeans(Community[,colSums(Community)>0]), y = na.omit(C_detected)), use = "complete.obs")
 cov_nm_P_detected = cov( data.frame(x = colMeans(Community[,colSums(Community)>0]), y = na.omit(P_detected)), use = "complete.obs")
-cov_C_P_detected = cov( data.frame(x = C_detected, y = P_detected), use = "complete.obs")
 if( length(cov_nm_P_detected[,2])>1 ){
-  cov_nm_C_detected = cov_nm_C_detected[1,2]
   cov_nm_P_detected = cov_nm_P_detected[1,2]
-  cov_C_P_detected = cov_C_P_detected[1,2]
 } else {
-  cov_nm_C_detected = 0
   cov_nm_P_detected = 0
-  cov_C_P_detected = 0
 }
 
 # calculate singletons, doubletons, and the Chao1 richness estimator
@@ -114,48 +99,63 @@ S_ij2 = Richness_raw+(q1*(2*m-3)/m-q2*((m-2)^2)/(m*(m-1)))
 
 # compute correction terms for proposed approximation method
 k <- numTrans
-C <- mean_C_detected
 nm <- mean_n_m_detected
 P <- mean_P_detected
-Apx_detectP_terms <- c( eval(Dis),
-  eval(d2Dis_dnm2)*var_n_m_detected/2,
-  eval(d2Dis_dC2)*var_C_detected/2,
-  eval(d2Dis_dP2)*var_P_detected/2,
-  eval(d2Dis_dnmC)*cov_nm_C_detected,
-  eval(d2Dis_dnmP)*cov_nm_P_detected,
-  eval(d2Dis_dCP)*cov_C_P_detected ) # Approximated detection probability in community
+Omega_detectP_terms <- c( eval(Di),
+  eval(d2Di_dnm2)*var_n_m_detected/2,
+  eval(d2Di_dP2)*var_P_detected/2,
+  eval(d2Di_dnmP)*cov_nm_P_detected ) # Approximated detection probability in community
 
 # check for correction term relative to some threshold
-if( sum(Apx_detectP_terms, na.rm = T) > 0.1 ){ # if sum of correction terms is positive and greater than a threshold
-  Ds_apx = sum(Apx_detectP_terms, na.rm = T) # use full correction
+if( sum(Omega_detectP_terms, na.rm = T) > 0.1 ){ # if sum of correction terms is positive and greater than a threshold
+  D_omega <- sum(Omega_detectP_terms, na.rm = T) # use full correction
 } else {
-  Ds_apx = Apx_detectP_terms[1] # else, use 0th order correction
+  D_omega <- Omega_detectP_terms[1] # else, use 0th order correction
 }
-if( sum(Apx_detectP_terms, na.rm = T) > 1 ){
-  Ds_apx = 1
+if( sum(Omega_detectP_terms, na.rm = T) > 1 ){
+  D_omega <- 1
 }
+if( sum(Omega_detectP_terms, na.rm = T) < 0.1 ){
+  D_omega <- 0.1
+}
+Omega_taylor   <- Richness_raw/D_omega
+Omega_taylor_0 <- Richness_raw/Omega_detectP_terms[1]
 
-Omega_T <- Richness_raw/Ds_apx
 
-
-# save the mean states of correction terms to return with the function
-meanStates <- c(mean_n_m_detected,mean_C_detected,mean_P_detected,
-                var_n_m_detected,var_C_detected,var_P_detected)
+# assign the mean states of correction terms to return with the function
+meanStates <- c(mean_n_m_detected,mean_P_detected,
+                var_n_m_detected,var_P_detected,
+                cov_nm_P_detected )
 
 
 # compute Omega_o
-C <- na.omit(C_detected)
 nm <- n_m_detected
 P <- na.omit(P_detected)
-Ds_means <- eval(Dis)
-Ds_mean <- mean(Ds_means, na.rm = T)
-Omega_0 <- Richness_raw/Ds_mean
+D_means <- eval(Di)
+D_mean <- mean(D_means, na.rm = T)
+Omega <- Richness_raw/D_mean
 
 
-return(list(data.frame(Richness_raw=Richness_raw,
-                  Chao1=Chao1, Chao2=Chao2,
-                  ACE=ACE, S_aj2=S_aj2, S_ij2=S_ij2,
-                  Omega_0=Omega_0,
-                  Omega_T=Omega_T),meanStates=meanStates,
-       Apx_detectP_terms=Apx_detectP_terms))
+if( Richness_raw == 0 ){
+  Richness_raw = NA
+  Richness_taylor = NA
+  Richness_taylor_0 = NA
+  Richness_omega = NA
+  Chao1 = NA
+  GP = NA
+  Chao2 = NA
+  ACE = NA
+  JK_a = NA
+  JK_i = NA
+}
+
+
+
+
+return(list(data.frame(Richness_raw = Richness_raw,
+                  Chao1 = Chao1, GP = GP, Chao2 = Chao2,
+                  ACE = ACE, S_aj2 = S_aj2, S_ij2 = S_ij2,
+                  Omega = Omega, Omega_taylor = Omega_taylor, Omega_taylor_0 = Omega_taylor_0),
+            meanStates = meanStates,
+            Omega_detectP_terms = Omega_detectP_terms))
 }
