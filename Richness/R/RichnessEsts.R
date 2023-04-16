@@ -69,7 +69,7 @@ f2 = sum(colSums(Community) == 2) # number of doubleton species
 Chao1 = Richness_raw+f1*(f1-1)/(2*(f2+1)) # Chao1 richness estimator
 
 # compute GP (Gamma-Poisson mixture) estimate (Chiu 2023, peerJ)
-f3 = sum(sum(TransectAbundance,1)==3) #number of tripleton species
+f3 = sum(colSums(Community)==3) # number of tripleton species
 if( f3 == 0 ){
   f3c = 1
 } else {
@@ -79,6 +79,7 @@ if( f1 == 0 ){
   f1c = 1
 } else {
   f1c = f1
+}
 A = 2-(2*f2^2)/(3*f1c*f3c)
 if( f2 > 0 ){
   f0Chao1 = f1c^2/(2*f2)
@@ -86,16 +87,16 @@ if( f2 > 0 ){
   f0Chao1 = f1c*(f1c-1)/2
 }
 if( A < 1 ){
-  GP = Richness_raw+f0Chao1*max(c(.5, A))
+  GP = Richness_raw + f0Chao1*max(c(.5, A))
 } else {
-  GP = Richness_raw+f0Chao1
+  GP = Richness_raw + f0Chao1
 }
 
 # compute Chao2 estimate
 q1 = sum(colSums(Community >= 1) == 1) # number of species occurring in one sample only
 q2 = sum(colSums(Community >= 1) == 2) # number of species occurring in two samples only
 m = sum(colSums(Community >= 1)) # total number of samples
-Chao2 = Richness_raw+((m-1)/m)*q1*(q1-1)/(2*(q2+1)) # Chao2 richness estimator
+Chao2 = Richness_raw + ((m-1)/m)*q1*(q1-1)/(2*(q2+1)) # Chao2 richness estimator
 
 # compute abundance-based coverage estimator (ACE)
 S_rare = sum(colSums(Community) <= 10 & colSums(Community) > 0 ) # number of rare species (<=10 individuals)
@@ -108,17 +109,20 @@ for( a in 1:10 ){
 }
 V2 = max(((S_rare/C_ACE)*wsumfa/(n_rare*(n_rare - 1)) - 1),0) # coefficient of variation
 if( C_ACE > 0 ){
-  ACE = S_abund+S_rare/C_ACE+(f1/C_ACE)*V2
+  ACE = S_abund + S_rare/C_ACE + (f1/C_ACE)*V2
 } else {
   ACE = Chao1
 }
 
 # compute jackknife abundance estimator
-S_aj2 = Richness_raw+2*f1-f2
+JK_a = Richness_raw+2*f1-f2
 
 # compute jackknife incidence estimator
-S_ij2 = Richness_raw+(q1*(2*m-3)/m-q2*((m-2)^2)/(m*(m-1)))
-
+if( m == 1){
+  JK_i = Richness_raw
+} else {
+  JK_i = Richness_raw + (q1*(2*m-3)/m-q2*((m-2)^2)/(m*(m-1)))
+}
 
 
 # compute correction terms for proposed approximation method
@@ -178,7 +182,7 @@ if( Richness_raw == 0 ){
 
 return(list(data.frame(Richness_raw = Richness_raw,
                   Chao1 = Chao1, GP = GP, Chao2 = Chao2,
-                  ACE = ACE, S_aj2 = S_aj2, S_ij2 = S_ij2,
+                  ACE = ACE, JK_a = JK_a, JK_i = JK_i,
                   Omega = Omega, Omega_taylor = Omega_taylor, Omega_taylor_0 = Omega_taylor_0),
             meanStates = meanStates,
             Omega_detectP_terms = Omega_detectP_terms))
